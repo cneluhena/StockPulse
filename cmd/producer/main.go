@@ -15,6 +15,7 @@ func main() {
 	cfg := config.Load()
 
 	log.Println(cfg.KafkaTopic)
+	
 	writer := &kafka.Writer{
 		Addr:  kafka.TCP(cfg.KafkaBroker),
 		Topic: cfg.KafkaTopic,
@@ -24,6 +25,7 @@ func main() {
 		Logger: kafka.LoggerFunc(log.Printf),
 		AllowAutoTopicCreation: true,
 	}
+
 	defer writer.Close()
 
 	wsURL := "wss://ws.finnhub.io?token=" + cfg.FinnhubToken
@@ -37,7 +39,7 @@ func main() {
 		conn.WriteJSON(map[string]string{"type": "subscribe", "symbol": s})
 	}
 	
-	//log.Println("Streaming ticks to Kafka...")
+	log.Println("Streaming ticks to Kafka...")
 
 	for {
 		_, message, err := conn.ReadMessage()
@@ -47,7 +49,7 @@ func main() {
 			break
 		}
 		
-		log.Print(string(message))
+		//log.Print(string(message))
 		writer.WriteMessages(context.Background(), kafka.Message{Value: message})
 	}
 }

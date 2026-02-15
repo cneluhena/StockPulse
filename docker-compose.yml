@@ -27,3 +27,50 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093
+  
+  # spark-master:
+  #   image: bitnamilegacy/spark:3.5
+  #   container_name: spark_master
+  #   environment:
+  #     - SPARK_MODE=master
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #   ports:
+  #     - "8081:8080"
+  #     - "7077:7077"
+  #   volumes:
+  #     - ./spark_apps:/opt/bitnami/spark/spark_apps
+  #     - ./jars:/opt/bitnami/spark/jars
+
+  # spark-worker:
+  #   image: bitnamilegacy/spark:3.5
+  #   container_name: spark_worker
+  #   environment:
+  #     - SPARK_MODE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_RPC_AUTHENTICATION_ENABLED=no
+  #   depends_on:
+  #     - spark-master
+
+  spark-master:
+    image: apache/spark:latest
+    container_name: spark_master
+    user: root 
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8086:8080" 
+      - "7077:7077" 
+    volumes:
+      - ./spark_apps:/opt/spark/work-dir/spark_apps
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master"]
+
+  spark-worker:
+    image: apache/spark:latest
+    container_name: spark_worker
+    user: root
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+    depends_on:
+      - spark-master
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker", "spark://spark-master:7077"]
