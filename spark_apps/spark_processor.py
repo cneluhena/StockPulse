@@ -45,11 +45,34 @@ ohlc_df = parsed_df \
 #     .option("truncate", "false") \
 #     .start()
 
+def write_to_postgres(batch_df, batch_id):
+    # Flatten the window struct so it matches our table columns
+    db_df = batch_df.select(
+        col("symbol"),
+        col("window.start").alias("window_start"),
+        col("window.end").alias("window_end"),
+        col("open").alias("open_price"),
+        col("high").alias("high_price"),
+        col("low").alias("low_price"),
+        col("close").alias("close_price")
+    )
+
+    # Use the JDBC driver to sink data
+    # Note: Using 'append' mode here with the DB primary key handles updates
+    db_df.write \
+        .format("jdbc") \
+        .option("url", "jdbc:postgresql://postgres_db:5432/stock_analytics") \
+        .option("dbtable", "ohlc_candles") \
+        .option("user", "stockpulse") \
+        .option("password", "password123") \
+        .option("driver", "org.postgresql.Driver") \
+        .mode("append") \
+        .save()
+
 query = ohlc_df.writeStream \
-    .outputMode("append") \
-    .format("parquet") \
-    .option("path", "/data/ohlc_output") \
-    .option("checkpointLocation", "/tmp/checkpoint") \
+    .outputMode("update") \
+    .foreachBatch(write_to_postgres) \
+    .option("checkpointLocation", "/opt/bitnami/spark/spark_apps/checkpoints") \
     .start()
 
 query.awaitTermination()
